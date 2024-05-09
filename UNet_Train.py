@@ -75,7 +75,6 @@ if __name__ == '__main__':
             optimizer.step()
             optimizer.zero_grad()
             train_loss += loss.item()
-            break
 
         # Run one test epoch
         model.eval()
@@ -89,7 +88,6 @@ if __name__ == '__main__':
                 loss = loss_function(batch_pred, targets)
                 test_loss += loss.item()
                 segMetrics.update(preds=batch_pred.softmax(dim=1).argmax(dim=1).detach().cpu().numpy(),masks=targets.detach().cpu().numpy())
-                break
 
         # Record the performance of the current train epoch
         current_epoch_train_loss = train_loss/len(train_loader)
