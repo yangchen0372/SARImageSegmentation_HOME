@@ -13,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from Models.UNet.UNet import UNet
 from Utils.Tools import getTime
 from Utils.Logger import Logger
+from Utils.SegMetrics import SegMetrics
 
 if __name__ == '__main__':
 
@@ -39,8 +40,8 @@ if __name__ == '__main__':
 
     # TRAIN CONFIG
     train_epoch = 100
-    batch_size = 16
-    init_lr = 1e-4
+    batch_size = 10
+    init_lr = 1e-3
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=1,num_classes=fusar_config.NUM_CLASSES).to(device)
     loss_function = nn.CrossEntropyLoss()
@@ -49,7 +50,7 @@ if __name__ == '__main__':
 
     # DATASET CONFIG
     train_img_list, test_img_list, train_mask_list, test_mask_list = train_test_split(img_list,mask_list,test_size=0.2,random_state=12345,shuffle=True)
-    train_dataset = FUSAR_DATASET(train_img_list,train_mask_list,classes,classes_idx,colormap)
+    train_dataset = FUSAR_DATASET(train_img_list,train_mask_list,classes,classes_idx,colormap,is_aug=True)
     train_loader = DataLoader(train_dataset,batch_size=batch_size, shuffle=True)
     test_dataset = FUSAR_DATASET(test_img_list,test_mask_list,classes,classes_idx,colormap)
     test_loader = DataLoader(test_dataset,batch_size=1, shuffle=False)
@@ -58,13 +59,14 @@ if __name__ == '__main__':
     # IoU
 
     # TRAINING AND TESTING
+    segMetrics = SegMetrics(num_classes=fusar_config.NUM_CLASSES)
     for epoch_idx in range(1,train_epoch + 1):
 
         # Run one train epoch
         model.train()
         train_loss = 0.0
         for iter_idx, (inputs, targets) in enumerate(train_loader,start=1):
-            print("Train_Epoch:{} Iter:{}".format(epoch_idx,iter_idx))
+            # print("Train_Epoch:{} Iter:{}".format(epoch_idx,iter_idx))
             inputs, targets = inputs.to(device), targets.to(device)
             batch_pred = model(inputs)
             loss = loss_function(batch_pred, targets)
@@ -72,21 +74,31 @@ if __name__ == '__main__':
             optimizer.step()
             optimizer.zero_grad()
             train_loss += loss.item()
+            break
 
         # Run one test epoch
         model.eval()
         test_loss = 0.0
-        for iter_idx, (inputs, targets) in enumerate(test_loader, start=1):
-            print("Test_Epoch:{} Iter:{}".format(epoch_idx, iter_idx))
-            inputs, targets = inputs.to(device), targets.to(device)
-            batch_pred = model(inputs)
-            loss = loss_function(batch_pred, targets)
-            test_loss += loss.item()
+        segMetrics.reset()
+        with torch.no_grad():
+            for iter_idx, (inputs, targets) in enumerate(test_loader, start=1):
+                # print("Test_Epoch:{} Iter:{}".format(epoch_idx, iter_idx))
+                inputs, targets = inputs.to(device), targets.to(device)
+                batch_pred = model(inputs)
+                loss = loss_function(batch_pred, targets)
+                test_loss += loss.item()
+                segMetrics.update(preds=batch_pred.softmax(dim=1).argmax(dim=1).detach().cpu().numpy(),masks=targets.detach().cpu().numpy())
+                break
 
         # Record the performance of the current train epoch
         current_epoch_train_loss = train_loss/len(train_loader)
         current_epoch_test_loss = test_loss/len(test_loader)
-        train_log = 'EPOCH:{} train_loss:{:.4f} test_loss:{:.4f}'.format(epoch_idx,current_epoch_train_loss,current_epoch_test_loss)
+        current_epoch_segMetrics = segMetrics.getMetricsResult()
+        train_log = 'EPOCH:{} train_loss:{:.4f} test_loss:{:.4f} overall accuracy:{:.4f} per-class accuracy:{} miou:{:.4f} per-class iou:{}'.format(
+            epoch_idx,current_epoch_train_loss,current_epoch_test_loss,
+            current_epoch_segMetrics['micro_accuracy'],['{:.4f}'.format(class_accuracy) for class_accuracy in current_epoch_segMetrics['macro_accuracy']],
+            current_epoch_segMetrics['macro_iou'].mean(),['{:.4f}'.format(class_iou) for class_iou in current_epoch_segMetrics['macro_iou']]
+        )
         logger.write(train_log,is_print=True)
 
 

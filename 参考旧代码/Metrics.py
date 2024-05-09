@@ -10,6 +10,25 @@ from pycm import *
 y_true=[2, 0, 2, 2, 0, 1, 1, 2, 2, 0, 1, 2]
 y_pred=[0, 0, 2, 1, 0, 2, 1, 0, 2, 0, 2, 2]
 labels = [0,1,2]
+# import os
+# from Utils.ReadDataset import FUSAR_DATASET,FUSAR_DATASET_CONFIG,getFileList
+# from torch.utils.data import DataLoader
+# from sklearn.model_selection import train_test_split
+# PROJECT_HOME = os.path.abspath(r'/')
+# dataset_root = os.path.join(PROJECT_HOME, 'Dataset', 'FUSAR')
+# fusar_config = FUSAR_DATASET_CONFIG(dataset_root)
+# img_list = getFileList(os.path.join(fusar_config.IMAGE_ROOT, '*.tif'))
+# mask_list = getFileList(os.path.join(fusar_config.MASK_ROOT, '*.tif'))
+# classes = fusar_config.CLASSES_NAME
+# classes_idx = fusar_config.CLASSES_INDEX
+# colormap = fusar_config.CLASSES_COLORMAP
+# train_img_list, test_img_list, train_mask_list, test_mask_list = train_test_split(img_list, mask_list, test_size=0.2, random_state=12345, shuffle=True)
+# train_dataset = FUSAR_DATASET(train_img_list, train_mask_list, classes, classes_idx, colormap)
+# train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+# img,mask = train_dataset[101]
+# mask = mask.numpy()
+# y_true = mask.flatten()
+# y_pred = mask.flatten()
 cm = ConfusionMatrix(actual_vector=y_true, predict_vector=y_pred,classes=labels)
 print(' ')
 print('---------Confusion Matrix-------')
