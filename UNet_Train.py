@@ -56,7 +56,8 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_dataset,batch_size=1, shuffle=False)
 
     # Record the performance metrics of the best epoch and the last epoch in training
-    # IoU
+    best_overall_accuracy = 0
+    best_epoch = 0
 
     # TRAINING AND TESTING
     segMetrics = SegMetrics(num_classes=fusar_config.NUM_CLASSES)
@@ -94,12 +95,24 @@ if __name__ == '__main__':
         current_epoch_train_loss = train_loss/len(train_loader)
         current_epoch_test_loss = test_loss/len(test_loader)
         current_epoch_segMetrics = segMetrics.getMetricsResult()
-        train_log = 'EPOCH:{} train_loss:{:.4f} test_loss:{:.4f} overall accuracy:{:.4f} per-class accuracy:{} miou:{:.4f} per-class iou:{}'.format(
+        train_log = 'EPOCH:{} train_loss:{:.4f} test_loss:{:.4f} overall accuracy:{:.4f} per-class accuracy:{} miou:{:.4f} per-class iou:{} best_OA_epoch:{}'.format(
             epoch_idx,current_epoch_train_loss,current_epoch_test_loss,
             current_epoch_segMetrics['micro_accuracy'],['{:.4f}'.format(class_accuracy) for class_accuracy in current_epoch_segMetrics['macro_accuracy']],
-            current_epoch_segMetrics['macro_iou'].mean(),['{:.4f}'.format(class_iou) for class_iou in current_epoch_segMetrics['macro_iou']]
+            current_epoch_segMetrics['macro_iou'].mean(),['{:.4f}'.format(class_iou) for class_iou in current_epoch_segMetrics['macro_iou']],
+            best_epoch
         )
         logger.write(train_log,is_print=True)
+
+        # record best epoch performance
+        if current_epoch_segMetrics['micro_accuracy'] > best_overall_accuracy:
+            best_overall_accuracy = current_epoch_segMetrics['micro_accuracy']
+            best_epoch = epoch_idx
+            logger.save_checkpoint(model,'best.pt')
+
+        logger.save_checkpoint(model, 'last.pt')
+        # One Epoch Finished
+    # Training Finished
+
 
 
 

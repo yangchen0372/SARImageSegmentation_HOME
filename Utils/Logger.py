@@ -2,6 +2,7 @@
 # @Time    : 2024/5/6 下午8:08
 # @Author  : yang chen
 import os
+import torch
 from torch.utils.tensorboard import SummaryWriter
 
 class Logger():
@@ -35,9 +36,8 @@ class Logger():
                     print(line_str)
         f.close()
 
-    def save_checkpoint(self, parameter ,file_name):
-        pass
-        # torch.save({})
+    def save_checkpoint(self, model ,file_name):
+        torch.save(model.state_dict(), os.path.join(self.root_path, file_name))
 
 
     def close(self):
